@@ -3,14 +3,19 @@ package internal
 import (
 	"context"
 	"fmt"
+	"time"
 )
 
 type Service struct {
-	repo Repository
+	repo           Repository
+	holidayChecker HolidayChecker
 }
 
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, checker HolidayChecker) *Service {
+	return &Service{
+		repo:           repo,
+		holidayChecker: checker,
+	}
 }
 
 type SubtractBooksRequest struct {
@@ -22,6 +27,11 @@ func (s *Service) SubtractBooks(ctx context.Context, req SubtractBooksRequest) e
 	store, err := s.repo.Get(ctx, req.StoreID)
 	if err != nil {
 		return fmt.Errorf("get book store: %w", err)
+	}
+
+	today := time.Now()
+	if isHoliday := s.holidayChecker.Check(today); isHoliday {
+		return fmt.Errorf("do not subtract on holidays")
 	}
 
 	if err := store.Subtract(req.Amount); err != nil {

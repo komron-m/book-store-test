@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestSubtract_Behaviour_Succeeds(t *testing.T) {
@@ -19,6 +20,7 @@ func TestSubtract_Behaviour_Succeeds(t *testing.T) {
 
 	// init mock
 	mockRepo := newMockRepo()
+	mockedHolidayChecker := newMockHolidayChecker()
 
 	// init desired entity (aggregate)
 	store := NewStore(storeID, 2_000)
@@ -26,9 +28,10 @@ func TestSubtract_Behaviour_Succeeds(t *testing.T) {
 	// set-up expectations
 	mockRepo.On("Get", ctx, storeID).Return(store, nil)
 	mockRepo.On("Update", ctx, store).Return(nil)
+	mockedHolidayChecker.On("Check", mock.AnythingOfType("time.Time")).Return(false)
 
 	// init service and call Subtract method
-	srv := NewService(mockRepo)
+	srv := NewService(mockRepo, mockedHolidayChecker)
 	err := srv.SubtractBooks(ctx, req)
 
 	// asserting use-case behaved as expected
@@ -53,7 +56,7 @@ func TestSubtract_StateChange(t *testing.T) {
 	fakeRepo.mapStore[storeID] = store
 
 	// init service and call Subtract method
-	srv := NewService(fakeRepo)
+	srv := NewService(fakeRepo, dummyHolidayChecker{})
 	err := srv.SubtractBooks(ctx, req)
 
 	assert.NoError(t, err)
